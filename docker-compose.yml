@@ -1,0 +1,138 @@
+version: "3.7"
+services:
+  bici-proxy:
+    image: "traefik"
+    container_name: "traefik"
+    command:
+      - "--log.level=DEBUG"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "${BICI_PROXY_PORT}:80"
+      - "9999:8080"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+  bici-superset-redis:
+      extends:
+        file: docker-compose-superset.yaml
+        service: bici-superset-redis
+  bici-superset-db:
+      extends: 
+        file: docker-compose-superset.yaml
+        service: bici-superset-db
+  bici-superset:
+      extends: 
+        file: docker-compose-superset.yaml
+        service: bici-superset
+      depends_on:
+        - bici-superset-redis  
+      labels:
+          - traefik.enable=true
+          - traefik.http.routers.bici-superset.rule=Host(`superset.${BICI_DOMAIN}`)
+          - traefik.http.services.bici-superset.loadbalancer.server.port=8088  
+  bici-superset-init:      
+      extends: 
+        file: docker-compose-superset.yaml
+        service: bici-superset-init
+      depends_on:
+        - bici-superset-redis    
+  bici-superset-worker:      
+      extends: 
+        file: docker-compose-superset.yaml
+        service: bici-superset-worker
+      depends_on:
+        - bici-superset-redis    
+  bici-superset-worker-beat:      
+      extends: 
+        file: docker-compose-superset.yaml
+        service: bici-superset-worker-beat
+      depends_on:
+        - bici-superset-redis    
+  bici-db:
+      image: timescale/timescaledb-ha:pg15-latest
+      volumes:
+        - ./data/postgis-data:/var/lib/postgresql
+      ports:
+        - 55432:5432
+      env_file: ./.env
+      restart: on-failure
+  bici-scrapper:
+      build: ./bicicuenca_scrapper
+      env_file: ./.env
+      environment:
+        - DATABASE_DB=bicicuenca
+        - DATABASE_USER=superset
+        - DATABASE_PASSWORD=llactalab.b1c1cu3nca2023
+        - DATABASE_HOST=bici-db
+        - DATABASE_PORT=5432
+      restart: on-failure    
+      depends_on:
+        - bici-db
+  bici-geoserver:
+      image: kartoza/geoserver:latest
+      volumes:
+        - ./data/geoserver-data:/opt/geoserver/data_dir
+      restart: on-failure
+      # ports:
+      #   - 8999:8080
+      environment:
+        # - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
+        # - GEOWEBCACHE_CACHE_DIR=${GEOWEBCACHE_CACHE_DIR}
+        - GEOSERVER_ADMIN_PASSWORD=llactalab.admin
+        - GEOSERVER_ADMIN_USER=admin
+        # - INITIAL_MEMORY=${INITIAL_MEMORY}
+        # - MAXIMUM_MEMORY=${MAXIMUM_MEMORY}
+        # - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
+        # - GEOWEBCACHE_CACHE_DIR=${GEOWEBCACHE_CACHE_DIR}
+        # - GEOSERVER_ADMIN_PASSWORD=${GEOSERVER_ADMIN_PASSWORD}
+        # - GEOSERVER_ADMIN_USER=${GEOSERVER_ADMIN_USER}
+        # - INITIAL_MEMORY=${INITIAL_MEMORY}
+        # - MAXIMUM_MEMORY=${MAXIMUM_MEMORY}  
+      # depends_on:
+      #   db:
+      #     condition: service_healthy
+      # healthcheck:
+      #   test: "curl --fail --silent --write-out 'HTTP CODE : %{http_code}\n' --output /dev/null -u ${GEOSERVER_ADMIN_USER}:'${GEOSERVER_ADMIN_PASSWORD}' http://localhost:8080/geoserver/rest/about/version.xml"
+      #   interval: 1m30s
+      #   timeout: 10s
+      #   retries: 3
+      labels:
+          - traefik.enable=true
+          - traefik.http.routers.bici-geoserver.rule=Host(`geoserver.${BICI_DOMAIN}`)
+          - traefik.http.services.bici-geoserver.loadbalancer.server.port=8080
+  bici-geoportal:
+      build: ./bicicuenca_geoportal
+      restart: on-failure    
+      # ports:
+        # - 3302:3001
+      labels:
+          - traefik.enable=true
+          - traefik.http.routers.bici-geoportal.rule=Host(`geoportal.${BICI_DOMAIN}`)
+          - traefik.http.services.bici-geoportal.loadbalancer.server.port=3001  
+  bici-app:
+    build:
+      context: ./bicicuenca_app
+      target: runner
+    volumes:
+      - ./bicicuenca_app:/app
+    # ports:
+    #   - "3300:3003"
+    environment:
+      NODE_ENV: production      
+    env_file: ./.env  
+    labels:
+          - traefik.enable=true
+          - traefik.http.routers.bici-app.rule=Host(`${BICI_DOMAIN}`)
+          - traefik.http.services.bici-app.loadbalancer.server.port=3003
+  bici-otp:
+        image: nginx
+        # ports:
+        #     - 3303:80
+        volumes:
+            - ./bicicuenca_otp:/usr/share/nginx/html   
+        labels:
+          - traefik.enable=true
+          - traefik.http.routers.bici-otp.rule=Host(`otp.${BICI_DOMAIN}`)
+          - traefik.http.services.bici-otp.loadbalancer.server.port=80

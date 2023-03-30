@@ -1,0 +1,22 @@
+<layer>
+  <name>bici_parqueaderos</name>
+  <id>LayerInfoImpl--3639bec:186e8a22a33:-7e80</id>
+  <type>VECTOR</type>
+  <defaultStyle>
+    <id>StyleInfoImpl--3639bec:186e8a22a33:-7e7f</id>
+  </defaultStyle>
+  <styles class="linked-hash-set">
+    <style>
+      <id>StyleInfoImpl--3639bec:186e8a22a33:-7e7f</id>
+    </style>
+  </styles>
+  <resource class="featureType">
+    <id>FeatureTypeInfoImpl--3639bec:186e8a22a33:-7e81</id>
+  </resource>
+  <attribution>
+    <logoWidth>0</logoWidth>
+    <logoHeight>0</logoHeight>
+  </attribution>
+  <dateCreated>2023-03-16 04:32:55.449 UTC</dateCreated>
+  <dateModified>2023-03-16 04:34:30.862 UTC</dateModified>
+</layer>

@@ -1,0 +1,26 @@
+version: "3.7"
+services:
+  bici-app: 
+    build:
+      context: ./bicicuenca_app
+      target: runner
+    volumes:
+      - ./bicicuenca_app:/app
+    ports:
+      - "3300:3003"
+    environment:
+      NODE_ENV: production      
+    env_file: ./.env  
+  bici-geoportal:
+    build: ./bicicuenca_geoportal
+    restart: on-failure    
+    ports:
+      - 3302:3001
+  bici-otp:
+    image: nginx
+    ports:
+        - 3303:80
+    volumes:
+        - ./bicicuenca_otp:/usr/share/nginx/html    
+
+        

@@ -117,8 +117,8 @@ services:
       target: runner
     volumes:
       - ./bicicuenca_app:/app
-    # ports:
-    #   - "3300:3003"
+    ports:
+      - "3300:3003"
     environment:
       NODE_ENV: production      
     env_file: ./.env  
